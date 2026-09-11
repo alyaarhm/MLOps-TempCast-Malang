@@ -1,0 +1,22 @@
+project:
+  name: TempCast Malang
+  task: supervised_time_series_regression
+  target: temperature_2m_max_t_plus_1
+
+location:
+  city: Malang
+  latitude: -7.98
+  longitude: 112.63
+  timezone: Asia/Jakarta
+
+data:
+  source: Open-Meteo Historical Weather API
+  fetch_frequency: daily
+
+model:
+  candidates:
+    - linear_regression
+    - random_forest_regressor
+  metrics:
+    - MAE
+    - RMSE
