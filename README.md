@@ -41,3 +41,12 @@ MLOps-TempCast-Malang/
 ├── .gitignore
 ├── LICENSE
 └── README.md
+
+## Dynamic Data Ingestion
+
+TempCast Malang mengambil data cuaca dinamis dari Open-Meteo Historical Weather API.
+
+Script ingestion tersedia pada:
+
+```bash
+src/ingest_data.py
