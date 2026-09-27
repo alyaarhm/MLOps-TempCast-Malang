@@ -11,6 +11,7 @@ Pada LK-04, proyek dikembangkan lebih lanjut dengan implementasi dynamic data in
 ## Tujuan Proyek
 
 Proyek ini dirancang untuk:
+
 - menggunakan data cuaca harian Kota Malang,
 - melakukan prediksi suhu maksimum hari berikutnya,
 - menggunakan Open-Meteo Historical Weather API sebagai sumber data,
