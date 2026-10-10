@@ -4,20 +4,23 @@
 
 TempCast Malang adalah prototipe akademik untuk memprediksi suhu maksimum harian Kota Malang satu hari ke depan (`t+1`) menggunakan pendekatan supervised time-series regression.
 
-Pada LK-02, fokus utama adalah membangun fondasi teknis proyek MLOps berupa repository GitHub, GitHub Codespaces, struktur direktori terstandar, dependency management, dan GitHub Flow.
+Project ini dikembangkan secara bertahap untuk menerapkan konsep MLOps, mulai dari setup environment, data ingestion dinamis, preprocessing, hingga data versioning menggunakan DVC.
 
-Pada LK-04, proyek dikembangkan lebih lanjut dengan implementasi dynamic data ingestion dan preprocessing untuk mendukung pengambilan serta pengolahan data cuaca secara berkala.
+Pada LK-04, project telah mengimplementasikan dynamic data ingestion dan preprocessing.
+
+Pada LK-05, project dikembangkan lebih lanjut dengan integrasi Data Version Control (DVC) untuk melakukan versioning dataset, mencatat perubahan data, serta mendukung reproducibility dan audit data pada skenario continual learning.
 
 ## Tujuan Proyek
 
-Proyek ini dirancang untuk:
+Project ini dirancang untuk:
 
 - menggunakan data cuaca harian Kota Malang,
-- melakukan prediksi suhu maksimum hari berikutnya,
+- memprediksi suhu maksimum hari berikutnya,
 - menggunakan Open-Meteo Historical Weather API sebagai sumber data,
-- menyiapkan fondasi pengembangan MLOps yang reproducible,
-- mendukung pengambilan data dinamis secara berkala,
-- melakukan preprocessing data secara konsisten.
+- mengambil data secara dinamis dan berkala,
+- melakukan preprocessing data secara konsisten,
+- melakukan versioning dataset menggunakan DVC,
+- menjaga reproducibility dan data lineage dalam pipeline MLOps.
 
 ## Struktur Direktori
 
@@ -25,18 +28,20 @@ Proyek ini dirancang untuk:
 MLOps-TempCast-Malang/
 ├── .devcontainer/
 │   └── devcontainer.json
+├── .dvc/
+│   ├── .gitignore
+│   └── config
 ├── config/
 │   └── config.yaml
 ├── data/
 │   ├── raw/
+│   │   ├── .gitignore
+│   │   └── weather_2025-03-20_to_2026-09-20_20260927_224435.csv.dvc
 │   ├── processed/
 │   └── README.md
 ├── docs/
 ├── models/
-│   ├── .gitkeep
-│   └── README.md
 ├── notebooks/
-│   └── README.md
 ├── src/
 │   ├── data/
 │   │   └── __init__.py
@@ -47,73 +52,58 @@ MLOps-TempCast-Malang/
 │   └── preprocess.py
 ├── tests/
 │   └── test_smoke.py
-├── pytest.ini
-├── requirements.txt
+├── .dvcignore
 ├── .gitignore
 ├── LICENSE
+├── pytest.ini
+├── requirements.txt
 └── README.md
 ```
 
-## GitHub Codespaces
+## Environment
 
-Project dikembangkan menggunakan GitHub Codespaces agar environment pengembangan konsisten dan reproducible.
+Project dikembangkan menggunakan GitHub Codespaces.
 
-Environment utama menggunakan Python 3.11.
+Versi Python:
 
-Untuk menginstal seluruh dependency project:
+```text
+Python 3.11
+```
+
+Dependency dapat diinstal menggunakan:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Menjalankan Project
+## Data Source
 
-Untuk menjalankan konfigurasi utama project:
+Data cuaca berasal dari Open-Meteo Historical Weather API.
 
-```bash
-python src/main.py
-```
-
-Untuk menjalankan initial environment test:
-
-```bash
-python src/hello.py
-```
-
-Untuk menjalankan automated test:
-
-```bash
-pytest
-```
-
-## Konfigurasi TempCast Malang
-
-Konfigurasi utama project disimpan pada:
+Konfigurasi utama:
 
 ```text
-config/config.yaml
+Location    : Malang
+Latitude    : -7.98
+Longitude   : 112.63
+Timezone    : Asia/Jakarta
+Resolution  : Daily
 ```
 
-Konfigurasi tersebut memuat informasi utama seperti:
+Variabel yang digunakan antara lain:
 
-- nama project,
-- jenis task,
-- target prediksi,
-- lokasi Kota Malang,
-- latitude dan longitude,
-- timezone,
-- sumber data,
-- frekuensi pengambilan data,
-- kandidat model,
-- metrik evaluasi.
+```text
+time
+temperature_2m_max
+temperature_2m_min
+temperature_2m_mean
+precipitation_sum
+wind_speed_10m_max
+```
 
-## LK-04: Dynamic Data Ingestion dan Preprocessing
+## LK-04: Dynamic Data Ingestion
 
-Pada LK-04, TempCast Malang mengimplementasikan proses penarikan data cuaca secara dinamis dari Open-Meteo Historical Weather API dan melakukan preprocessing secara otomatis.
-
-### Data Ingestion
-
-Script data ingestion tersedia pada:
+Script ingestion:
 
 ```text
 src/ingest_data.py
@@ -125,232 +115,440 @@ Untuk menjalankan ingestion:
 python src/ingest_data.py
 ```
 
-Proses ingestion melakukan:
+Pada implementasi terakhir, ingestion menggunakan window 550 hari.
 
-- pengambilan data cuaca harian dari Open-Meteo API,
-- pengambilan data berdasarkan koordinat Kota Malang,
-- penggunaan timezone `Asia/Jakarta`,
-- pengambilan data menggunakan window 550 hari,
-- validasi HTTP response,
-- timeout handling,
-- retry ketika request mengalami kegagalan,
-- validasi response kosong,
-- konversi response JSON menjadi DataFrame,
-- penyimpanan raw data dalam format CSV.
-
-Hasil ingestion disimpan pada:
-
-```text
-data/raw/
-```
-
-Contoh file raw hasil ingestion:
+Contoh hasil ingestion:
 
 ```text
 weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Pada pengujian terbaru, proses ingestion berhasil mengambil 550 baris data cuaca harian.
-
-### Mekanisme Non-Destructive
-
-Setiap proses ingestion menghasilkan nama file yang mengandung timestamp.
-
-Dengan mekanisme ini, file hasil ingestion sebelumnya tidak tertimpa ketika script dijalankan kembali.
-
-Contoh pola nama file:
+Dataset awal yang digunakan untuk LK-05 memiliki:
 
 ```text
-weather_<start_date>_to_<end_date>_<timestamp>.csv
+550 baris
 ```
-
-Mekanisme tersebut digunakan untuk mensimulasikan proses pengambilan data secara periodik.
-
-### Simulasi Pengambilan Data Periodik
-
-Script ingestion dapat dijalankan berulang menggunakan:
-
-```bash
-python src/ingest_data.py
-```
-
-Untuk melihat hasil ingestion:
-
-```bash
-ls -lt data/raw
-```
-
-Setiap eksekusi menghasilkan file baru sehingga riwayat data tetap tersedia.
 
 ## Data Preprocessing
 
-Script preprocessing tersedia pada:
+Script preprocessing:
 
 ```text
 src/preprocess.py
 ```
 
-Untuk menjalankan preprocessing:
+Jalankan:
 
 ```bash
 python src/preprocess.py
 ```
 
-Tahapan preprocessing meliputi:
+Tahapan preprocessing mencakup:
 
-- validasi struktur kolom,
-- konversi kolom waktu menjadi tipe datetime,
-- konversi nilai cuaca menjadi tipe numerik,
-- pemeriksaan dan penanganan missing value,
-- penghapusan data duplikat berdasarkan tanggal,
-- pengurutan data secara kronologis,
-- pembuatan lag feature,
-- pembuatan rolling mean feature,
-- pembuatan calendar feature,
-- pembentukan target suhu maksimum hari berikutnya (`t+1`).
+- validasi kolom,
+- konversi timestamp,
+- konversi tipe data numerik,
+- penanganan missing value,
+- penghapusan duplikasi berdasarkan waktu,
+- pengurutan data,
+- feature engineering.
 
-Pada pengujian terbaru diperoleh:
+## LK-05: Manajemen Data Versioning Menggunakan DVC
 
-```text
-Raw files loaded: 5
-Rows before preprocessing: 647
-Rows after cleaning: 557
-Rows after feature engineering: 549
-```
+Pada LK-05, Data Version Control (DVC) digunakan untuk melakukan versioning dataset hasil ingestion.
 
-Hasil preprocessing disimpan pada:
+DVC digunakan karena Git tidak dirancang untuk menyimpan file dataset besar secara langsung.
 
-```text
-data/processed/
-```
+Dengan DVC:
 
-Contoh file processed:
+- Git menyimpan file metadata `.dvc`,
+- file dataset dikelola oleh DVC,
+- perubahan dataset dapat dilacak,
+- versi data dapat dibandingkan,
+- proses eksperimen menjadi lebih reproducible,
+- data lineage lebih mudah diaudit.
 
-```text
-tempcast_features_20260927_224501.csv
-```
+## Inisialisasi DVC
 
-## Feature Engineering
-
-Feature yang dihasilkan antara lain:
+Versi DVC yang digunakan:
 
 ```text
-temperature_2m_max_lag1
-temperature_2m_max_lag3
-temperature_2m_max_lag7
-temperature_2m_max_roll3_mean
-temperature_2m_max_roll7_mean
-month
-day_of_year
-temperature_2m_max_t_plus_1
+3.67.1
 ```
 
-Feature tersebut digunakan sebagai dasar untuk tahap pengembangan model machine learning berikutnya.
-
-## Data Pipeline
-
-Alur data TempCast Malang:
-
-```text
-Open-Meteo API
-        ↓
-Data Ingestion
-        ↓
-data/raw/
-        ↓
-Data Cleaning
-        ↓
-Feature Engineering
-        ↓
-data/processed/
-```
-
-Pipeline tersebut memungkinkan data baru diambil secara berkala dan diproses secara konsisten sebelum digunakan pada tahap modeling.
-
-## Pengujian
-
-Pengujian project dilakukan menggunakan `pytest`.
-
-Jalankan:
+DVC diinisialisasi menggunakan:
 
 ```bash
-pytest
+dvc init
 ```
 
-Hasil pengujian terbaru:
+Setelah proses inisialisasi, file berikut ditambahkan:
 
 ```text
-1 passed
+.dvc/.gitignore
+.dvc/config
+.dvcignore
 ```
 
-Syntax script juga telah diperiksa menggunakan:
+Commit inisialisasi:
+
+```text
+e5586f9 chore: initialize DVC for LK5
+```
+
+## Tracking Dataset Versi 1
+
+Dataset awal:
+
+```text
+data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
+```
+
+Karena file tersebut sebelumnya sudah dilacak oleh Git, tracking Git dihentikan menggunakan:
 
 ```bash
-python -m py_compile src/ingest_data.py src/preprocess.py
+git rm --cached data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Panjang baris pada kedua script juga telah diperiksa agar tidak melebihi 79 karakter.
-
-## Branching Strategy
-
-Project menggunakan GitHub Flow.
-
-Implementasi LK-04 dikembangkan pada branch:
-
-```text
-experiment/lk4-data-ingestion
-```
-
-Branch tersebut memuat:
-
-- `src/ingest_data.py`,
-- `src/preprocess.py`,
-- sampel raw data,
-- dokumentasi proses ingestion dan preprocessing.
-
-## Repository
-
-Repository public:
-
-```text
-https://github.com/alyaarhm/MLOps-TempCast-Malang
-```
-
-Branch LK-04:
-
-```text
-experiment/lk4-data-ingestion
-```
-
-## Reproducibility
-
-Untuk menjalankan ulang pipeline:
-
-1. Install dependency:
+Selanjutnya dataset dilacak menggunakan DVC:
 
 ```bash
-pip install -r requirements.txt
+dvc add data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-2. Jalankan data ingestion:
+File metadata yang dihasilkan:
+
+```text
+data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv.dvc
+```
+
+Metadata Dataset Versi 1:
+
+```text
+md5: cd8922786d870785c30fa23fe91b4947
+size: 19079
+```
+
+Jumlah data:
+
+```text
+550 baris
+```
+
+Commit Dataset Versi 1:
+
+```text
+76533cd data: track initial LK5 dataset with DVC
+```
+
+## Simulasi Continual Learning
+
+Untuk mensimulasikan adanya data baru, ingestion dijalankan kembali:
 
 ```bash
 python src/ingest_data.py
 ```
 
-3. Jalankan preprocessing:
+Hasil ingestion baru:
 
-```bash
-python src/preprocess.py
+```text
+weather_2025-04-02_to_2026-10-03_20261010_101851.csv
 ```
 
-4. Jalankan pengujian:
+Dataset awal dan dataset baru kemudian digabungkan.
 
-```bash
-pytest
+Untuk menghindari duplikasi, data diurutkan berdasarkan waktu dan duplikasi pada kolom `time` dihapus.
+
+Hasil simulasi:
+
+```text
+Rows V1: 550
+Rows ingestion baru: 550
+Rows V2 setelah merge + dedup: 563
+Periode V2: 2025-03-20 sampai 2026-10-03
 ```
 
-Dengan langkah tersebut, proses ingestion dan preprocessing dapat direproduksi pada GitHub Codespaces.
+Dataset bertambah sebanyak:
+
+```text
+13 observasi baru
+```
+
+## Deteksi Perubahan oleh DVC
+
+Setelah dataset diperbarui, perintah:
+
+```bash
+dvc status
+```
+
+mendeteksi perubahan:
+
+```text
+changed outs:
+    modified:
+        data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
+```
+
+Hal ini menunjukkan bahwa isi dataset sudah berbeda dengan metadata Versi 1.
+
+## Dataset Versi 2
+
+Metadata DVC diperbarui kembali menggunakan:
+
+```bash
+dvc add data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
+```
+
+Metadata Dataset Versi 2:
+
+```text
+md5: 24049e0aa0e75db53f723b4833037b93
+size: 19528
+```
+
+Perubahan metadata:
+
+```text
+Versi 1:
+md5: cd8922786d870785c30fa23fe91b4947
+size: 19079
+
+Versi 2:
+md5: 24049e0aa0e75db53f723b4833037b93
+size: 19528
+```
+
+Commit Dataset Versi 2:
+
+```text
+8151a3f data: update LK5 dataset to version 2
+```
+
+## Audit dan Perbandingan Versi
+
+Perbandingan antarversi dilakukan menggunakan:
+
+```bash
+dvc diff 76533cd 8151a3f --show-hash
+```
+
+Hasil:
+
+```text
+Modified:
+    cd892278..24049e0a  data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
+
+files summary: 1 modified
+```
+
+Hasil tersebut menunjukkan bahwa Dataset Versi 1 dan Dataset Versi 2 memiliki hash yang berbeda.
+
+Perubahan hash menunjukkan bahwa isi dataset telah berubah.
+
+Perbandingan file metadata `.dvc` juga dapat dilihat menggunakan:
+
+```bash
+git diff -- data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv.dvc
+```
+
+Perubahan yang tercatat:
+
+```text
+- md5: cd8922786d870785c30fa23fe91b4947
+- size: 19079
+
++ md5: 24049e0aa0e75db53f723b4833037b93
++ size: 19528
+```
+
+## Sinkronisasi DVC
+
+Setelah metadata DVC diperbarui, status menunjukkan:
+
+```text
+Data and pipelines are up to date.
+```
+
+Artinya dataset lokal sudah sesuai dengan metadata DVC yang aktif.
+
+## DVC Remote Storage
+
+Untuk mendemonstrasikan mekanisme remote storage, digunakan local DVC remote.
+
+Remote dibuat menggunakan:
+
+```bash
+mkdir -p ../dvc-storage
+dvc remote add -d localremote ../dvc-storage
+```
+
+Konfigurasi pada `.dvc/config`:
+
+```text
+[core]
+    remote = localremote
+
+['remote "localremote"']
+    url = ../../dvc-storage
+```
+
+Data DVC dikirim ke remote menggunakan:
+
+```bash
+dvc push
+```
+
+Hasil:
+
+```text
+1 file pushed
+```
+
+Pengecekan semua versi:
+
+```bash
+dvc push --all-commits
+```
+
+Hasil:
+
+```text
+Everything is up to date.
+```
+
+Local remote digunakan sebagai simulasi mekanisme remote storage.
+
+Pada implementasi production, remote dapat diganti menggunakan object storage seperti:
+
+- AWS S3,
+- Google Cloud Storage,
+- MinIO,
+- Azure Blob Storage.
+
+## Data Lineage
+
+Histori perubahan dataset dapat ditelusuri melalui kombinasi Git dan DVC.
+
+Histori utama LK-05:
+
+```text
+bc40083 chore: configure DVC remote storage
+8151a3f data: update LK5 dataset to version 2
+76533cd data: track initial LK5 dataset with DVC
+e5586f9 chore: initialize DVC for LK5
+```
+
+Dengan mekanisme ini, dapat diketahui:
+
+- kapan DVC mulai digunakan,
+- versi dataset awal,
+- kapan dataset diperbarui,
+- hash setiap versi,
+- perubahan ukuran dataset,
+- konfigurasi remote storage.
+
+## Mengapa Data Versioning Penting?
+
+Data versioning merupakan bagian penting dalam MLOps karena model machine learning sangat bergantung pada data yang digunakan saat training.
+
+Jika dataset berubah tanpa pencatatan versi, hasil eksperimen akan sulit direproduksi.
+
+Sebagai contoh, model yang dilatih menggunakan Dataset Versi 1 dapat menghasilkan performa berbeda dengan model yang dilatih menggunakan Dataset Versi 2.
+
+Dengan DVC, setiap eksperimen dapat dikaitkan dengan versi dataset tertentu.
+
+Manfaat utama data versioning:
+
+- menjaga reproducibility eksperimen,
+- mempermudah audit perubahan data,
+- mencatat data lineage,
+- membantu debugging,
+- mencegah kehilangan histori dataset,
+- mendukung continual learning,
+- mempermudah kolaborasi tim.
+
+## Git dan DVC
+
+Git digunakan untuk menyimpan:
+
+```text
+source code
+README
+konfigurasi
+file .dvc
+metadata
+```
+
+DVC digunakan untuk mengelola:
+
+```text
+dataset
+artefak data
+cache
+remote data storage
+```
+
+Dengan pemisahan tersebut, repository Git tetap ringan meskipun dataset berkembang.
+
+## Reproducibility
+
+Untuk mendapatkan project:
+
+```bash
+git clone https://github.com/alyaarhm/MLOps-TempCast-Malang
+```
+
+Pindah ke branch LK-05:
+
+```bash
+git switch experiment/lk5-dvc-versioning
+```
+
+Install dependency:
+
+```bash
+pip install -r requirements.txt
+pip install dvc
+```
+
+Ambil dataset dari DVC remote:
+
+```bash
+dvc pull
+```
+
+Cek status:
+
+```bash
+dvc status
+```
+
+## Branch LK-05
+
+Implementasi LK-05 dikembangkan pada branch:
+
+```text
+experiment/lk5-dvc-versioning
+```
+
+Repository:
+
+```text
+https://github.com/alyaarhm/MLOps-TempCast-Malang
+```
+
+## Kesimpulan
+
+Implementasi LK-05 menunjukkan bahwa DVC dapat digunakan untuk melakukan versioning dataset pada pipeline MLOps TempCast Malang.
+
+Dataset awal sebanyak 550 baris berhasil direkam sebagai Versi 1.
+
+Setelah simulasi penambahan data, dataset berkembang menjadi 563 baris dan direkam sebagai Versi 2.
+
+Perubahan versi dapat dibuktikan melalui perubahan hash DVC, `dvc status`, `git diff`, dan `dvc diff`.
+
+Penggunaan DVC membuat perubahan data dapat ditelusuri dan mendukung reproducibility, audit data, serta continual learning.
 
 ## License
 
