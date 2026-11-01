@@ -1,0 +1,5 @@
+outs:
+- md5: 95ab57c37f64cbe0a35b6e4cd68f1a8e
+  size: 618
+  hash: md5
+  path: lk07_production_model.yaml
