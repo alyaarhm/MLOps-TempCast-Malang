@@ -1,0 +1,27 @@
+model:
+  name: TempCast-Malang-Best-Model
+  version: 2
+  stage: Production
+  run_name: linear_regression_v2_extra_current_temp
+  model_type: LinearRegression
+
+metrics:
+  mae: 0.8113
+  rmse: 1.0107
+  r2: 0.4801
+
+training:
+  train_rows: 444
+  test_rows: 111
+  feature_count: 12
+  train_ratio: 0.8
+
+data_lineage:
+  dataset: data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
+  dvc_version: LK05_V2
+  dvc_md5: 24049e0aa0e75db53f723b4833037b93
+
+deployment:
+  active_model: true
+  inference_uri: models:/TempCast-Malang-Best-Model/Production
+  reason: Lowest RMSE and MAE with highest R2 compared with version 1.

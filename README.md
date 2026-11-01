@@ -553,3 +553,61 @@ Penggunaan DVC membuat perubahan data dapat ditelusuri dan mendukung reproducibi
 ## License
 
 Project ini menggunakan MIT License.
+## LK-07 - Model Registry, Versioning, dan Kesiapan Inferensi
+
+Pada LK-07, model terbaik dari LK-06 dikelola menggunakan MLflow Model Registry untuk mendukung versioning dan kesiapan inferensi.
+
+### Model Versioning
+
+Model terdaftar menggunakan nama:
+
+`TempCast-Malang-Best-Model`
+
+Versi yang tersedia:
+
+| Version | Model | Feature Count | MAE | RMSE | R2 | Stage |
+|---|---|---:|---:|---:|---:|---|
+| v1 | Linear Regression | 11 | 0.8297 | 1.0349 | 0.4549 | None |
+| v2 | Linear Regression | 12 | 0.8113 | 1.0107 | 0.4801 | Production |
+
+Model v2 menggunakan satu fitur tambahan, yaitu `temperature_2m_max`, sehingga jumlah fitur berubah dari 11 menjadi 12.
+
+### Active Production Model
+
+Model yang aktif untuk inferensi adalah:
+
+- Registered Model: `TempCast-Malang-Best-Model`
+- Version: `2`
+- Stage: `Production`
+- Run: `linear_regression_v2_extra_current_temp`
+
+Version 2 dipilih sebagai model Production karena menghasilkan performa yang lebih baik dibandingkan version 1, yaitu MAE dan RMSE yang lebih rendah serta R2 yang lebih tinggi.
+
+### Model Lifecycle
+
+Transisi stage yang dilakukan pada version 2:
+
+`None -> Staging -> Production`
+
+Transisi ini digunakan untuk mensimulasikan alur pengelolaan model dari hasil eksperimen hingga model siap digunakan untuk inferensi.
+
+### Data Lineage
+
+Model Production tetap terhubung dengan dataset yang telah dikelola menggunakan DVC pada LK-05.
+
+- Dataset: `data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv`
+- Dataset Version: `LK05_V2`
+- DVC MD5: `24049e0aa0e75db53f723b4833037b93`
+- Metadata Model: `models/lk07_production_model.yaml`
+
+### Inference Verification
+
+Model Production berhasil dimuat secara programatik menggunakan:
+
+`mlflow.pyfunc.load_model("models:/TempCast-Malang-Best-Model/Production")`
+
+Pengujian menggunakan satu input baru dengan 12 fitur menghasilkan prediksi:
+
+`30.71120928`
+
+Hal ini menunjukkan bahwa model berstatus Production telah siap dipanggil oleh layanan inferensi pada tahap berikutnya.
