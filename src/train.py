@@ -1,5 +1,6 @@
-"""Training and MLflow experiment tracking for TempCast Malang LK-06."""
+"""Training and MLflow experiment tracking for TempCast Malang LK-06/LK-08."""
 
+import os
 from pathlib import Path
 
 import mlflow
@@ -20,7 +21,11 @@ DATA_FILE = Path(
     "weather_2025-03-20_to_2026-09-20_20260927_224435.csv"
 )
 
-TRACKING_URI = "http://127.0.0.1:5000"
+TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "http://127.0.0.1:5000",
+)
+
 EXPERIMENT_NAME = "TempCast-Malang-LK06-Final"
 
 FEATURE_COLUMNS = [
@@ -256,16 +261,18 @@ def run_experiment(
 
 
 def main() -> None:
-    """Run all LK-06 experiments."""
+    """Run all LK-06 experiments for LK-08 automation."""
     mlflow.set_tracking_uri(TRACKING_URI)
 
     mlflow.set_experiment(
         EXPERIMENT_NAME
     )
 
+    print("MLflow Tracking URI:", TRACKING_URI)
+
     dataframe = load_and_prepare_data()
 
-    print("TempCast Malang - LK06")
+    print("TempCast Malang - Automated Training")
     print(
         "Rows after feature engineering:",
         len(dataframe),

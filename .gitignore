@@ -221,3 +221,4 @@ __marimo__/
 mlflow.db
 mlartifacts/
 mlruns/
+tempcast-mlops-*.json
