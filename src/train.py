@@ -237,7 +237,7 @@ def run_experiment(
             r2,
         )
 
-        mlflow.sklearn.log_model(
+        model_info = mlflow.sklearn.log_model(
             sk_model=model,
             name="model",
             serialization_format="cloudpickle",
@@ -249,6 +249,7 @@ def run_experiment(
         print(f"MAE: {mae:.4f}")
         print(f"RMSE: {rmse:.4f}")
         print(f"R2: {r2:.4f}")
+        print(f"Model URI: {model_info.model_uri}")
 
         return {
             "run_id": run.info.run_id,
@@ -257,6 +258,7 @@ def run_experiment(
             "mae": mae,
             "rmse": rmse,
             "r2": r2,
+            "model_uri": model_info.model_uri,
         }
 
 
@@ -381,6 +383,7 @@ def main() -> None:
                 "mae",
                 "rmse",
                 "r2",
+                "model_uri",
             ]
         ].to_string(
             index=False
@@ -407,6 +410,10 @@ def main() -> None:
     )
     print(
         f"R2: {best_result['r2']:.4f}"
+    )
+    print(
+        "Model URI:",
+        best_result["model_uri"],
     )
 
     result_dataframe.to_csv(

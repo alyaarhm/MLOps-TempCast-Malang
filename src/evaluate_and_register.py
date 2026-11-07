@@ -17,16 +17,21 @@ TRACKING_URI = os.getenv(
 
 REGISTERED_MODEL_NAME = "TempCast-Malang-Best-Model"
 
-# LK-01 baseline MAE = 0.8297.
-# Model baru masih dianggap layak bila penurunan performa tidak lebih dari 20%.
+# Baseline LK-01.
 BASELINE_MAE = 0.8297
+
+# Model dinyatakan lolos apabila MAE tidak memburuk
+# lebih dari 20% dibanding baseline.
 MAX_ALLOWED_MAE = BASELINE_MAE * 1.20
 
 
 def main() -> None:
+    """Validate best model and register it automatically."""
     mlflow.set_tracking_uri(TRACKING_URI)
 
-    results = pd.read_csv(RESULT_FILE)
+    results = pd.read_csv(
+        RESULT_FILE
+    )
 
     best_result = (
         results.sort_values(
@@ -36,39 +41,84 @@ def main() -> None:
         .iloc[0]
     )
 
-    run_id = best_result["run_id"]
-    run_name = best_result["run_name"]
-    mae = float(best_result["mae"])
-    rmse = float(best_result["rmse"])
-    r2 = float(best_result["r2"])
+    run_id = str(
+        best_result["run_id"]
+    )
 
+    run_name = str(
+        best_result["run_name"]
+    )
+
+    model_uri = str(
+        best_result["model_uri"]
+    )
+
+    mae = float(
+        best_result["mae"]
+    )
+
+    rmse = float(
+        best_result["rmse"]
+    )
+
+    r2 = float(
+        best_result["r2"]
+    )
+
+    print()
     print("========================================")
     print("AUTOMATED MODEL EVALUATION")
     print("========================================")
-    print(f"Best run       : {run_name}")
-    print(f"Run ID         : {run_id}")
-    print(f"MAE            : {mae:.4f}")
-    print(f"RMSE           : {rmse:.4f}")
-    print(f"R2             : {r2:.4f}")
-    print(f"Maximum MAE    : {MAX_ALLOWED_MAE:.4f}")
+    print(
+        f"Best run       : {run_name}"
+    )
+    print(
+        f"Run ID         : {run_id}"
+    )
+    print(
+        f"Model URI      : {model_uri}"
+    )
+    print(
+        f"MAE            : {mae:.4f}"
+    )
+    print(
+        f"RMSE           : {rmse:.4f}"
+    )
+    print(
+        f"R2             : {r2:.4f}"
+    )
+    print(
+        f"Maximum MAE    : {MAX_ALLOWED_MAE:.4f}"
+    )
 
     if mae > MAX_ALLOWED_MAE:
         print()
-        print("VALIDATION RESULT: FAILED")
         print(
-            "Model tidak memenuhi threshold performa. "
-            "Registry tidak diperbarui."
+            "VALIDATION RESULT: FAILED"
         )
+        print(
+            "Model tidak memenuhi threshold performa."
+        )
+        print(
+            "MLflow Model Registry tidak diperbarui."
+        )
+
         sys.exit(1)
 
     print()
-    print("VALIDATION RESULT: PASSED")
-
-    model_uri = f"runs:/{run_id}/model"
+    print(
+        "VALIDATION RESULT: PASSED"
+    )
 
     print()
-    print("Registering validated model...")
-    print("Model URI:", model_uri)
+    print(
+        "Registering validated model..."
+    )
+
+    print(
+        "Model URI:",
+        model_uri,
+    )
 
     registered_model = mlflow.register_model(
         model_uri=model_uri,
@@ -76,6 +126,14 @@ def main() -> None:
     )
 
     version = registered_model.version
+
+    print()
+    print(
+        "Successfully registered model."
+    )
+    print(
+        f"Version: {version}"
+    )
 
     client = MlflowClient(
         tracking_uri=TRACKING_URI,
@@ -101,6 +159,7 @@ def main() -> None:
     print(
         "Stage            : Staging"
     )
+    print("========================================")
 
 
 if __name__ == "__main__":
