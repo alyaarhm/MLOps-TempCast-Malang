@@ -1,0 +1,11 @@
+.git
+.github
+.dvc/cache
+__pycache__
+*.pyc
+.venv
+venv
+mlruns
+mlartifacts
+*.db
+.devcontainer/*.json
