@@ -4,11 +4,7 @@
 
 TempCast Malang adalah prototipe akademik untuk memprediksi suhu maksimum harian Kota Malang satu hari ke depan (`t+1`) menggunakan pendekatan supervised time-series regression.
 
-Project ini dikembangkan secara bertahap untuk menerapkan konsep MLOps, mulai dari setup environment, data ingestion dinamis, preprocessing, hingga data versioning menggunakan DVC.
-
-Pada LK-04, project telah mengimplementasikan dynamic data ingestion dan preprocessing.
-
-Pada LK-05, project dikembangkan lebih lanjut dengan integrasi Data Version Control (DVC) untuk melakukan versioning dataset, mencatat perubahan data, serta mendukung reproducibility dan audit data pada skenario continual learning.
+Project ini dikembangkan secara bertahap untuk menerapkan konsep MLOps, mulai dari setup environment, dynamic data ingestion, preprocessing, data versioning menggunakan DVC, experiment tracking menggunakan MLflow, Model Registry, automation pipeline menggunakan GitHub Actions, hingga orkestrasi layanan menggunakan Docker Compose.
 
 ## Tujuan Proyek
 
@@ -20,6 +16,10 @@ Project ini dirancang untuk:
 - mengambil data secara dinamis dan berkala,
 - melakukan preprocessing data secara konsisten,
 - melakukan versioning dataset menggunakan DVC,
+- melakukan experiment tracking menggunakan MLflow,
+- mengelola model menggunakan MLflow Model Registry,
+- mengotomasi pipeline MLOps menggunakan GitHub Actions,
+- menjalankan layanan ML menggunakan Docker Compose,
 - menjaga reproducibility dan data lineage dalam pipeline MLOps.
 
 ## Struktur Direktori
@@ -27,10 +27,14 @@ Project ini dirancang untuk:
 ```text
 MLOps-TempCast-Malang/
 ├── .devcontainer/
+│   ├── Dockerfile
 │   └── devcontainer.json
 ├── .dvc/
 │   ├── .gitignore
 │   └── config
+├── .github/
+│   └── workflows/
+│       └── mlops-automation.yaml
 ├── config/
 │   └── config.yaml
 ├── data/
@@ -46,14 +50,18 @@ MLOps-TempCast-Malang/
 │   ├── data/
 │   │   └── __init__.py
 │   ├── __init__.py
+│   ├── api.py
 │   ├── hello.py
 │   ├── ingest_data.py
 │   ├── main.py
 │   └── preprocess.py
 ├── tests/
 │   └── test_smoke.py
+├── .dockerignore
 ├── .dvcignore
 ├── .gitignore
+├── Dockerfile
+├── docker-compose.yaml
 ├── LICENSE
 ├── pytest.ini
 ├── requirements.txt
@@ -90,7 +98,7 @@ Timezone    : Asia/Jakarta
 Resolution  : Daily
 ```
 
-Variabel yang digunakan antara lain:
+Variabel utama:
 
 ```text
 time
@@ -101,7 +109,13 @@ precipitation_sum
 wind_speed_10m_max
 ```
 
-## LK-04: Dynamic Data Ingestion
+---
+
+# LK-04 — Dynamic Data Ingestion dan Preprocessing
+
+Pada LK-04, project mengimplementasikan dynamic data ingestion dan preprocessing untuk menyediakan data cuaca yang akan digunakan pada pipeline machine learning.
+
+## Dynamic Data Ingestion
 
 Script ingestion:
 
@@ -109,7 +123,7 @@ Script ingestion:
 src/ingest_data.py
 ```
 
-Untuk menjalankan ingestion:
+Menjalankan ingestion:
 
 ```bash
 python src/ingest_data.py
@@ -117,13 +131,13 @@ python src/ingest_data.py
 
 Pada implementasi terakhir, ingestion menggunakan window 550 hari.
 
-Contoh hasil ingestion:
+Contoh dataset:
 
 ```text
 weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Dataset awal yang digunakan untuk LK-05 memiliki:
+Dataset awal memiliki:
 
 ```text
 550 baris
@@ -137,7 +151,7 @@ Script preprocessing:
 src/preprocess.py
 ```
 
-Jalankan:
+Menjalankan preprocessing:
 
 ```bash
 python src/preprocess.py
@@ -153,36 +167,38 @@ Tahapan preprocessing mencakup:
 - pengurutan data,
 - feature engineering.
 
-## LK-05: Manajemen Data Versioning Menggunakan DVC
+---
+
+# LK-05 — Manajemen Data Versioning Menggunakan DVC
 
 Pada LK-05, Data Version Control (DVC) digunakan untuk melakukan versioning dataset hasil ingestion.
 
-DVC digunakan karena Git tidak dirancang untuk menyimpan file dataset besar secara langsung.
+DVC digunakan karena Git tidak dirancang untuk menyimpan dataset besar secara langsung.
 
 Dengan DVC:
 
 - Git menyimpan file metadata `.dvc`,
-- file dataset dikelola oleh DVC,
+- dataset dikelola oleh DVC,
 - perubahan dataset dapat dilacak,
 - versi data dapat dibandingkan,
-- proses eksperimen menjadi lebih reproducible,
+- eksperimen menjadi lebih reproducible,
 - data lineage lebih mudah diaudit.
 
 ## Inisialisasi DVC
 
-Versi DVC yang digunakan:
+Versi DVC:
 
 ```text
 3.67.1
 ```
 
-DVC diinisialisasi menggunakan:
+Inisialisasi:
 
 ```bash
 dvc init
 ```
 
-Setelah proses inisialisasi, file berikut ditambahkan:
+File yang dihasilkan:
 
 ```text
 .dvc/.gitignore
@@ -190,7 +206,7 @@ Setelah proses inisialisasi, file berikut ditambahkan:
 .dvcignore
 ```
 
-Commit inisialisasi:
+Commit:
 
 ```text
 e5586f9 chore: initialize DVC for LK5
@@ -204,38 +220,33 @@ Dataset awal:
 data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Karena file tersebut sebelumnya sudah dilacak oleh Git, tracking Git dihentikan menggunakan:
+Tracking Git dihentikan menggunakan:
 
 ```bash
 git rm --cached data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Selanjutnya dataset dilacak menggunakan DVC:
+Dataset kemudian dilacak menggunakan:
 
 ```bash
 dvc add data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-File metadata yang dihasilkan:
+Metadata:
 
 ```text
 data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv.dvc
 ```
 
-Metadata Dataset Versi 1:
+Dataset Versi 1:
 
 ```text
 md5: cd8922786d870785c30fa23fe91b4947
 size: 19079
+rows: 550
 ```
 
-Jumlah data:
-
-```text
-550 baris
-```
-
-Commit Dataset Versi 1:
+Commit:
 
 ```text
 76533cd data: track initial LK5 dataset with DVC
@@ -243,23 +254,23 @@ Commit Dataset Versi 1:
 
 ## Simulasi Continual Learning
 
-Untuk mensimulasikan adanya data baru, ingestion dijalankan kembali:
+Ingestion dijalankan kembali:
 
 ```bash
 python src/ingest_data.py
 ```
 
-Hasil ingestion baru:
+Dataset baru:
 
 ```text
 weather_2025-04-02_to_2026-10-03_20261010_101851.csv
 ```
 
-Dataset awal dan dataset baru kemudian digabungkan.
+Dataset awal dan dataset baru digabungkan.
 
-Untuk menghindari duplikasi, data diurutkan berdasarkan waktu dan duplikasi pada kolom `time` dihapus.
+Duplikasi pada kolom `time` dihapus setelah data diurutkan.
 
-Hasil simulasi:
+Hasil:
 
 ```text
 Rows V1: 550
@@ -268,7 +279,7 @@ Rows V2 setelah merge + dedup: 563
 Periode V2: 2025-03-20 sampai 2026-10-03
 ```
 
-Dataset bertambah sebanyak:
+Dataset bertambah:
 
 ```text
 13 observasi baru
@@ -276,13 +287,13 @@ Dataset bertambah sebanyak:
 
 ## Deteksi Perubahan oleh DVC
 
-Setelah dataset diperbarui, perintah:
+Perintah:
 
 ```bash
 dvc status
 ```
 
-mendeteksi perubahan:
+Hasil:
 
 ```text
 changed outs:
@@ -290,24 +301,24 @@ changed outs:
         data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Hal ini menunjukkan bahwa isi dataset sudah berbeda dengan metadata Versi 1.
+Hal tersebut menunjukkan bahwa isi dataset telah berubah.
 
 ## Dataset Versi 2
 
-Metadata DVC diperbarui kembali menggunakan:
+Metadata diperbarui menggunakan:
 
 ```bash
 dvc add data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
 ```
 
-Metadata Dataset Versi 2:
+Metadata Versi 2:
 
 ```text
 md5: 24049e0aa0e75db53f723b4833037b93
 size: 19528
 ```
 
-Perubahan metadata:
+Perbandingan:
 
 ```text
 Versi 1:
@@ -319,15 +330,15 @@ md5: 24049e0aa0e75db53f723b4833037b93
 size: 19528
 ```
 
-Commit Dataset Versi 2:
+Commit:
 
 ```text
 8151a3f data: update LK5 dataset to version 2
 ```
 
-## Audit dan Perbandingan Versi
+## Audit Versi
 
-Perbandingan antarversi dilakukan menggunakan:
+Perbandingan menggunakan:
 
 ```bash
 dvc diff 76533cd 8151a3f --show-hash
@@ -342,95 +353,25 @@ Modified:
 files summary: 1 modified
 ```
 
-Hasil tersebut menunjukkan bahwa Dataset Versi 1 dan Dataset Versi 2 memiliki hash yang berbeda.
-
-Perubahan hash menunjukkan bahwa isi dataset telah berubah.
-
-Perbandingan file metadata `.dvc` juga dapat dilihat menggunakan:
+Perubahan metadata juga dapat diperiksa menggunakan:
 
 ```bash
 git diff -- data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv.dvc
 ```
 
-Perubahan yang tercatat:
-
-```text
-- md5: cd8922786d870785c30fa23fe91b4947
-- size: 19079
-
-+ md5: 24049e0aa0e75db53f723b4833037b93
-+ size: 19528
-```
-
 ## Sinkronisasi DVC
 
-Setelah metadata DVC diperbarui, status menunjukkan:
+Status:
 
 ```text
 Data and pipelines are up to date.
 ```
 
-Artinya dataset lokal sudah sesuai dengan metadata DVC yang aktif.
-
-## DVC Remote Storage
-
-Untuk mendemonstrasikan mekanisme remote storage, digunakan local DVC remote.
-
-Remote dibuat menggunakan:
-
-```bash
-mkdir -p ../dvc-storage
-dvc remote add -d localremote ../dvc-storage
-```
-
-Konfigurasi pada `.dvc/config`:
-
-```text
-[core]
-    remote = localremote
-
-['remote "localremote"']
-    url = ../../dvc-storage
-```
-
-Data DVC dikirim ke remote menggunakan:
-
-```bash
-dvc push
-```
-
-Hasil:
-
-```text
-1 file pushed
-```
-
-Pengecekan semua versi:
-
-```bash
-dvc push --all-commits
-```
-
-Hasil:
-
-```text
-Everything is up to date.
-```
-
-Local remote digunakan sebagai simulasi mekanisme remote storage.
-
-Pada implementasi production, remote dapat diganti menggunakan object storage seperti:
-
-- AWS S3,
-- Google Cloud Storage,
-- MinIO,
-- Azure Blob Storage.
+Artinya dataset lokal sesuai dengan metadata DVC aktif.
 
 ## Data Lineage
 
-Histori perubahan dataset dapat ditelusuri melalui kombinasi Git dan DVC.
-
-Histori utama LK-05:
+Histori utama:
 
 ```text
 bc40083 chore: configure DVC remote storage
@@ -439,176 +380,617 @@ bc40083 chore: configure DVC remote storage
 e5586f9 chore: initialize DVC for LK5
 ```
 
-Dengan mekanisme ini, dapat diketahui:
+DVC membantu menjaga:
 
-- kapan DVC mulai digunakan,
-- versi dataset awal,
-- kapan dataset diperbarui,
-- hash setiap versi,
-- perubahan ukuran dataset,
-- konfigurasi remote storage.
+- reproducibility,
+- audit perubahan data,
+- data lineage,
+- debugging,
+- continual learning.
 
-## Mengapa Data Versioning Penting?
+---
 
-Data versioning merupakan bagian penting dalam MLOps karena model machine learning sangat bergantung pada data yang digunakan saat training.
+# LK-06 — Experiment Tracking Menggunakan MLflow
 
-Jika dataset berubah tanpa pencatatan versi, hasil eksperimen akan sulit direproduksi.
+Pada LK-06, proses training dan evaluasi model dicatat menggunakan MLflow Experiment Tracking.
 
-Sebagai contoh, model yang dilatih menggunakan Dataset Versi 1 dapat menghasilkan performa berbeda dengan model yang dilatih menggunakan Dataset Versi 2.
+MLflow digunakan untuk menyimpan informasi setiap eksperimen sehingga hasil beberapa model dapat dibandingkan secara konsisten.
 
-Dengan DVC, setiap eksperimen dapat dikaitkan dengan versi dataset tertentu.
+## Eksperimen
 
-Manfaat utama data versioning:
-
-- menjaga reproducibility eksperimen,
-- mempermudah audit perubahan data,
-- mencatat data lineage,
-- membantu debugging,
-- mencegah kehilangan histori dataset,
-- mendukung continual learning,
-- mempermudah kolaborasi tim.
-
-## Git dan DVC
-
-Git digunakan untuk menyimpan:
+Total eksperimen:
 
 ```text
-source code
-README
-konfigurasi
-file .dvc
-metadata
+4 runs
 ```
 
-DVC digunakan untuk mengelola:
+Model terbaik:
 
 ```text
-dataset
-artefak data
-cache
-remote data storage
+Linear Regression
 ```
 
-Dengan pemisahan tersebut, repository Git tetap ringan meskipun dataset berkembang.
-
-## Reproducibility
-
-Untuk mendapatkan project:
-
-```bash
-git clone https://github.com/alyaarhm/MLOps-TempCast-Malang
-```
-
-Pindah ke branch LK-05:
-
-```bash
-git switch experiment/lk5-dvc-versioning
-```
-
-Install dependency:
-
-```bash
-pip install -r requirements.txt
-pip install dvc
-```
-
-Ambil dataset dari DVC remote:
-
-```bash
-dvc pull
-```
-
-Cek status:
-
-```bash
-dvc status
-```
-
-## Branch LK-05
-
-Implementasi LK-05 dikembangkan pada branch:
+Metric model terbaik:
 
 ```text
-experiment/lk5-dvc-versioning
+MAE  : 0.8297
+RMSE : 1.0349
+R2   : 0.4549
 ```
 
-Repository:
+Model menggunakan:
 
 ```text
-https://github.com/alyaarhm/MLOps-TempCast-Malang
+11 fitur
 ```
 
-## Kesimpulan
+## Experiment Tracking
 
-Implementasi LK-05 menunjukkan bahwa DVC dapat digunakan untuk melakukan versioning dataset pada pipeline MLOps TempCast Malang.
+Setiap run mencatat:
 
-Dataset awal sebanyak 550 baris berhasil direkam sebagai Versi 1.
+- model,
+- parameter eksperimen,
+- metric evaluasi,
+- artifact model,
+- informasi run.
 
-Setelah simulasi penambahan data, dataset berkembang menjadi 563 baris dan direkam sebagai Versi 2.
+Dengan mekanisme ini, proses pemilihan model dapat ditelusuri melalui MLflow.
 
-Perubahan versi dapat dibuktikan melalui perubahan hash DVC, `dvc status`, `git diff`, dan `dvc diff`.
+## Model Terbaik
 
-Penggunaan DVC membuat perubahan data dapat ditelusuri dan mendukung reproducibility, audit data, serta continual learning.
+Linear Regression dipilih sebagai model terbaik pada LK-06.
 
-## License
+Model tersebut kemudian digunakan sebagai dasar untuk proses Model Registry pada LK-07.
 
-Project ini menggunakan MIT License.
-## LK-07 - Model Registry, Versioning, dan Kesiapan Inferensi
+---
 
-Pada LK-07, model terbaik dari LK-06 dikelola menggunakan MLflow Model Registry untuk mendukung versioning dan kesiapan inferensi.
+# LK-07 — Model Registry, Versioning, dan Kesiapan Inferensi
 
-### Model Versioning
+Pada LK-07, model terbaik dari LK-06 dikelola menggunakan MLflow Model Registry untuk mendukung versioning dan kesiapan inference.
 
-Model terdaftar menggunakan nama:
+## Model Versioning
 
-`TempCast-Malang-Best-Model`
+Registered Model:
 
-Versi yang tersedia:
+```text
+TempCast-Malang-Best-Model
+```
+
+Versi:
 
 | Version | Model | Feature Count | MAE | RMSE | R2 | Stage |
 |---|---|---:|---:|---:|---:|---|
 | v1 | Linear Regression | 11 | 0.8297 | 1.0349 | 0.4549 | None |
 | v2 | Linear Regression | 12 | 0.8113 | 1.0107 | 0.4801 | Production |
 
-Model v2 menggunakan satu fitur tambahan, yaitu `temperature_2m_max`, sehingga jumlah fitur berubah dari 11 menjadi 12.
+Model v2 menggunakan satu fitur tambahan yaitu:
 
-### Active Production Model
+```text
+temperature_2m_max
+```
 
-Model yang aktif untuk inferensi adalah:
+Jumlah fitur berubah dari 11 menjadi 12.
 
-- Registered Model: `TempCast-Malang-Best-Model`
-- Version: `2`
-- Stage: `Production`
-- Run: `linear_regression_v2_extra_current_temp`
+## Active Production Model
 
-Version 2 dipilih sebagai model Production karena menghasilkan performa yang lebih baik dibandingkan version 1, yaitu MAE dan RMSE yang lebih rendah serta R2 yang lebih tinggi.
+Model aktif:
 
-### Model Lifecycle
+```text
+Registered Model : TempCast-Malang-Best-Model
+Version          : 2
+Stage            : Production
+Run              : linear_regression_v2_extra_current_temp
+```
 
-Transisi stage yang dilakukan pada version 2:
+Version 2 dipilih karena menghasilkan:
 
-`None -> Staging -> Production`
+- MAE lebih rendah,
+- RMSE lebih rendah,
+- R2 lebih tinggi.
 
-Transisi ini digunakan untuk mensimulasikan alur pengelolaan model dari hasil eksperimen hingga model siap digunakan untuk inferensi.
+## Model Lifecycle
 
-### Data Lineage
+Transisi:
 
-Model Production tetap terhubung dengan dataset yang telah dikelola menggunakan DVC pada LK-05.
+```text
+None -> Staging -> Production
+```
 
-- Dataset: `data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv`
-- Dataset Version: `LK05_V2`
-- DVC MD5: `24049e0aa0e75db53f723b4833037b93`
-- Metadata Model: `models/lk07_production_model.yaml`
+Alur tersebut mensimulasikan lifecycle model sebelum digunakan untuk inference.
 
-### Inference Verification
+## Data Lineage
 
-Model Production berhasil dimuat secara programatik menggunakan:
+Model Production terhubung dengan dataset LK-05:
 
-`mlflow.pyfunc.load_model("models:/TempCast-Malang-Best-Model/Production")`
+```text
+Dataset         : data/raw/weather_2025-03-20_to_2026-09-20_20260927_224435.csv
+Dataset Version : LK05_V2
+DVC MD5         : 24049e0aa0e75db53f723b4833037b93
+Metadata Model  : models/lk07_production_model.yaml
+```
 
-Pengujian menggunakan satu input baru dengan 12 fitur menghasilkan prediksi:
+## Inference Verification
 
-`30.71120928`
+Model Production dapat dimuat menggunakan:
 
-Hal ini menunjukkan bahwa model berstatus Production telah siap dipanggil oleh layanan inferensi pada tahap berikutnya.
+```python
+mlflow.pyfunc.load_model(
+    "models:/TempCast-Malang-Best-Model/Production"
+)
+```
 
+Hasil pengujian inference:
+
+```text
+30.71120928
+```
+
+Model Production siap digunakan pada tahapan berikutnya.
+
+---
+
+# LK-08 — Otomasi Pipeline MLOps Menggunakan GitHub Actions
+
+Pada LK-08, pipeline MLOps diotomasi menggunakan GitHub Actions.
+
+Workflow menjalankan proses testing dan pipeline machine learning secara otomatis.
+
+## Branch LK-08
+
+```text
+experiment/lk8-automation
+```
+
+## Workflow
+
+File workflow:
+
+```text
+.github/workflows/mlops-automation.yaml
+```
+
+## DVC Remote
+
+DVC remote terhubung dengan DagsHub:
+
+```text
+dagshub.com/alyaarhm/MLOps-TempCast-Malang
+```
+
+GitHub Actions menggunakan secret:
+
+```text
+DAGSHUB_TOKEN
+```
+
+untuk mengakses remote secara aman.
+
+## Tahapan Automation
+
+Pipeline menjalankan:
+
+1. Checkout repository.
+2. Setup Python environment.
+3. Install dependencies.
+4. Menjalankan testing.
+5. Mengambil dataset menggunakan DVC.
+6. Menjalankan training model.
+7. Mengevaluasi performa model.
+8. Melakukan validasi.
+9. Melanjutkan proses model jika pipeline berhasil.
+
+## DVC Pull
+
+Dataset dapat diperoleh menggunakan:
+
+```bash
+dvc pull
+```
+
+Dengan mekanisme tersebut, workflow dapat mengambil dataset tanpa menyimpan file data besar langsung di Git.
+
+## Hasil Pipeline
+
+Workflow GitHub Actions berhasil menjalankan pipeline secara end-to-end.
+
+Implementasi automation membantu:
+
+- mengurangi proses manual,
+- meningkatkan consistency,
+- menjaga reproducibility,
+- mempermudah eksekusi pipeline.
+
+---
+
+# LK-09 — Orkestrasi Layanan ML Terintegrasi Menggunakan Docker Compose
+
+Pada LK-09, layanan TempCast Malang diorkestrasi menggunakan Docker Compose.
+
+Tujuan utamanya adalah menjalankan:
+
+- inference API,
+- MLflow Tracking Server,
+- PostgreSQL,
+
+sebagai satu sistem multi-container yang saling terhubung.
+
+## Arsitektur Service
+
+Service utama:
+
+```text
+postgres-db
+     ↓
+mlflow-server
+     ↓
+api-service
+```
+
+### postgres-db
+
+PostgreSQL digunakan sebagai backend metadata MLflow.
+
+### mlflow-server
+
+MLflow Server digunakan sebagai:
+
+- tracking server,
+- Model Registry,
+- penyedia metadata model.
+
+### api-service
+
+FastAPI digunakan untuk:
+
+- health check,
+- membaca informasi model,
+- melakukan inference.
+
+## Docker Compose
+
+Konfigurasi orkestrasi disimpan pada:
+
+```text
+docker-compose.yaml
+```
+
+Seluruh service dapat dijalankan menggunakan satu perintah:
+
+```bash
+docker compose up -d --build
+```
+
+## Custom Bridge Network
+
+Service menggunakan custom Docker network:
+
+```text
+tempcast-network
+```
+
+Dengan network ini, container dapat mengakses container lain menggunakan service name.
+
+Contoh:
+
+```text
+http://mlflow-server:5000
+```
+
+API tidak perlu menggunakan IP address container secara langsung.
+
+## Persistent Volumes
+
+Named volume:
+
+```text
+postgres_data
+mlflow_artifacts
+```
+
+### postgres_data
+
+Digunakan untuk menyimpan data PostgreSQL.
+
+### mlflow_artifacts
+
+Digunakan untuk menyimpan artifact MLflow.
+
+Volume membuat data tetap tersedia meskipun container dihentikan.
+
+## Dependency Antar-Service
+
+`depends_on` digunakan untuk mengatur dependency.
+
+Urutan:
+
+```text
+postgres-db
+→ mlflow-server
+→ api-service
+```
+
+Healthcheck digunakan agar service berikutnya tidak dijalankan sebelum dependency siap.
+
+## Menjalankan Sistem
+
+Build dan start seluruh service:
+
+```bash
+docker compose up -d --build
+```
+
+Periksa status:
+
+```bash
+docker compose ps
+```
+
+Service utama:
+
+```text
+postgres-db
+mlflow-server
+api-service
+```
+
+## Verifikasi Komunikasi Antar-Container
+
+Komunikasi dari API menuju MLflow:
+
+```bash
+docker compose exec api-service python -c "import requests; r=requests.get('http://mlflow-server:5000/health'); print('Status:', r.status_code); print('Success:', r.status_code == 200)"
+```
+
+Hasil:
+
+```text
+Status: 200
+Success: True
+```
+
+Hasil tersebut membuktikan bahwa `api-service` dapat berkomunikasi dengan `mlflow-server` melalui custom Docker network.
+
+## MLflow Model Registry
+
+Model yang digunakan pada LK-09:
+
+```text
+TempCast-Malang-LK09-Model
+```
+
+Model Version:
+
+```text
+3
+```
+
+API mengambil model melalui MLflow Model Registry.
+
+## Endpoint `/health`
+
+Health endpoint:
+
+```text
+GET /health
+```
+
+Pengujian:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Endpoint digunakan untuk memastikan API berjalan.
+
+## Endpoint `/model-info`
+
+Informasi model:
+
+```bash
+curl http://localhost:8000/model-info
+```
+
+Contoh response:
+
+```json
+{
+  "model_name": "TempCast-Malang-LK09-Model",
+  "model_version": "3",
+  "loaded_from": "MLflow Model Registry",
+  "tracking_uri": "http://mlflow-server:5000"
+}
+```
+
+Response menunjukkan bahwa API berhasil mengambil model dari MLflow Model Registry.
+
+## Endpoint `/predict`
+
+Inference menggunakan:
+
+```text
+POST /predict
+```
+
+Contoh request:
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "temperature_2m_min": 22.0,
+    "temperature_2m_mean": 26.0,
+    "precipitation_sum": 1.0,
+    "wind_speed_10m_max": 12.0,
+    "temperature_2m_max_lag1": 30.0,
+    "temperature_2m_max_lag3": 29.5,
+    "temperature_2m_max_lag7": 30.2,
+    "temperature_2m_max_roll3_mean": 29.8,
+    "temperature_2m_max_roll7_mean": 30.0,
+    "month": 11,
+    "day_of_year": 322
+  }'
+```
+
+Model menghasilkan prediksi sekitar:
+
+```text
+30.5439
+```
+
+Hal tersebut menunjukkan bahwa model berhasil digunakan untuk inference melalui API.
+
+## Inter-Container Communication
+
+Alur inference:
+
+```text
+User
+  ↓
+api-service
+  ↓
+mlflow-server
+  ↓
+MLflow Model Registry
+  ↓
+Model
+  ↓
+Prediction
+```
+
+Tracking URI dari API:
+
+```text
+http://mlflow-server:5000
+```
+
+Hal tersebut membuktikan bahwa layanan tidak bergantung pada `localhost` antar-container.
+
+## Persistence Test
+
+Container dapat dihentikan menggunakan:
+
+```bash
+docker compose down
+```
+
+Kemudian dijalankan kembali:
+
+```bash
+docker compose up -d
+```
+
+Named volume tetap tersedia.
+
+Verifikasi volume:
+
+```bash
+docker volume ls
+```
+
+Dengan demikian:
+
+- data PostgreSQL tetap tersimpan,
+- artifact MLflow tetap tersedia,
+- model tetap dapat diakses setelah container dijalankan kembali.
+
+## Docker Compose Status
+
+Status seluruh service:
+
+```bash
+docker compose ps
+```
+
+Output digunakan untuk memastikan semua service berada dalam kondisi berjalan/healthy.
+
+## Menghentikan Sistem
+
+Untuk menghentikan seluruh container:
+
+```bash
+docker compose down
+```
+
+Volume tidak dihapus oleh perintah tersebut.
+
+Jika seluruh volume juga ingin dihapus:
+
+```bash
+docker compose down -v
+```
+
+Perintah `-v` tidak digunakan pada pengujian persistence karena akan menghapus named volume.
+
+## Reproducibility LK-09
+
+Clone repository:
+
+```bash
+git clone https://github.com/alyaarhm/MLOps-TempCast-Malang
+```
+
+Masuk ke repository:
+
+```bash
+cd MLOps-TempCast-Malang
+```
+
+Pindah ke branch LK-09:
+
+```bash
+git switch experiment/lk9-docker-compose
+```
+
+Jalankan seluruh sistem:
+
+```bash
+docker compose up -d --build
+```
+
+Periksa status:
+
+```bash
+docker compose ps
+```
+
+API dapat diakses melalui:
+
+```text
+http://localhost:8000
+```
+
+MLflow Server dapat diakses melalui:
+
+```text
+http://localhost:5000
+```
+
+## Ringkasan LK-09
+
+Pada LK-09, TempCast Malang berhasil dijalankan sebagai sistem multi-container menggunakan Docker Compose.
+
+Sistem terdiri dari:
+
+- PostgreSQL,
+- MLflow Server,
+- FastAPI inference service.
+
+Ketiga service berhasil berkomunikasi melalui custom bridge network `tempcast-network`.
+
+Persistent volume `postgres_data` dan `mlflow_artifacts` digunakan untuk menjaga data tetap tersedia setelah container direstart.
+
+Dependency antar-service dikelola menggunakan `depends_on` dan healthcheck.
+
+Model `TempCast-Malang-LK09-Model` berhasil dimuat dari MLflow Model Registry dan digunakan oleh API untuk menghasilkan prediction.
+
+Seluruh sistem dapat direplikasi menggunakan satu perintah:
+
+```bash
+docker compose up -d --build
+```
+
+---
+
+# License
+
+Project ini menggunakan MIT License.
