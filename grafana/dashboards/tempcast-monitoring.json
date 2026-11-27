@@ -1,0 +1,416 @@
+{
+  "uid": "tempcast-lk11",
+  "title": "TempCast Malang - ML Observability Dashboard",
+  "description": "LK-11 Monitoring, Model Serving, Scaling and Data Drift Detection",
+  "tags": ["MLOps", "TempCast", "LK11", "Observability"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "editable": true,
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Active Model Replicas",
+      "description": "Jumlah replika model yang berhasil di-scrape Prometheus.",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(up{job=\"tempcast-model\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "green", "value": 3}
+            ]
+          }
+        }
+      },
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 2,
+      "title": "Total Successful Requests",
+      "description": "Jumlah request inference sukses pada replika aktif.",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "sum(tempcast_model_requests_total{status=\"success\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"decimals": 0, "color": {"mode": "fixed", "fixedColor": "green"}}
+      },
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 3,
+      "title": "Inference Error Rate",
+      "description": "Persentase kegagalan inference dalam satu menit. Threshold awal simulasi 5 persen.",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "100 * sum(rate(tempcast_model_errors_total[1m])) / clamp_min(sum(rate(tempcast_model_requests_total[1m])), 0.000001)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 2},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      },
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 4,
+      "title": "Latest Prediction",
+      "description": "Prediksi terakhir dari setiap replika model.",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "tempcast_model_latest_prediction",
+          "legendFormat": "{{replica}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {"unit": "celsius", "decimals": 2}
+      },
+      "options": {"colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "id": 5,
+      "title": "Inference Latency - p50 and p95",
+      "description": "p50 menunjukkan latensi median. p95 menunjukkan batas latensi 95 persen request.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.50, sum by (le) (rate(tempcast_model_latency_seconds_bucket[1m])))",
+          "legendFormat": "p50 latency",
+          "refId": "A"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(tempcast_model_latency_seconds_bucket[1m])))",
+          "legendFormat": "p95 latency",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Inference Throughput - Requests per Second",
+      "description": "Jumlah request inference per detik pada seluruh replika.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 4, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(tempcast_model_requests_total[1m]))",
+          "legendFormat": "Requests per second",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "custom": {"lineWidth": 2, "fillOpacity": 20}
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Traffic Distribution per Replica",
+      "description": "Distribusi jumlah request per detik pada setiap replika model.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (replica) (rate(tempcast_model_requests_total[1m]))",
+          "legendFormat": "Replica {{replica}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {"lineWidth": 2, "fillOpacity": 15}
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "Prediction Distribution",
+      "description": "Distribusi temperatur hasil prediksi berdasarkan histogram dalam interval waktu.",
+      "type": "heatmap",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 12, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (le) (increase(tempcast_model_prediction_bucket[1m]))",
+          "legendFormat": "{{le}}",
+          "format": "heatmap",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {"scheme": "Spectral"},
+        "yAxis": {"unit": "celsius"},
+        "legend": {"show": true},
+        "tooltip": {"show": true}
+      }
+    },
+    {
+      "id": 9,
+      "title": "Average Predicted Temperature",
+      "description": "Rata-rata suhu maksimum yang diprediksi selama satu menit.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 20, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(tempcast_model_prediction_sum[1m])) / sum(rate(tempcast_model_prediction_count[1m]))",
+          "legendFormat": "Average prediction",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 2,
+          "custom": {"lineWidth": 2, "fillOpacity": 15}
+        }
+      }
+    },
+    {
+      "id": 10,
+      "title": "Inference Error Rate Over Time",
+      "description": "Persentase request yang gagal pada setiap interval.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 20, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "100 * sum(rate(tempcast_model_errors_total[1m])) / clamp_min(sum(rate(tempcast_model_requests_total[1m])), 0.000001)",
+          "legendFormat": "Error rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "decimals": 2,
+          "custom": {"lineWidth": 2, "fillOpacity": 15},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 5}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Model CPU Usage per Replica",
+      "description": "Pemanfaatan CPU oleh proses model serving. 100 persen setara dengan satu logical CPU.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 28, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "100 * rate(process_cpu_seconds_total{job=\"tempcast-model\"}[1m])",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "Model RAM Usage per Replica",
+      "description": "Resident memory yang digunakan proses model serving.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 28, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"tempcast-model\"}",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {"lineWidth": 2, "fillOpacity": 10}
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "Input Temperature Mean - Baseline vs Current",
+      "description": "Perbandingan rata-rata fitur temperatur input pada FastAPI dengan baseline training.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 36, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "tempcast_feature_baseline_mean{feature=\"temperature_2m_mean\"}",
+          "legendFormat": "Training baseline",
+          "refId": "A"
+        },
+        {
+          "expr": "tempcast_feature_current_mean{feature=\"temperature_2m_mean\"}",
+          "legendFormat": "Current input mean",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 2,
+          "custom": {"lineWidth": 2}
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "Data Drift Score per Feature",
+      "description": "Pergeseran mean relatif terhadap baseline training. Threshold awal simulasi sebesar 15 persen.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 36, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "100 * tempcast_feature_drift_score",
+          "legendFormat": "{{feature}}",
+          "refId": "A"
+        },
+        {
+          "expr": "100 * tempcast_drift_threshold",
+          "legendFormat": "Drift threshold",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "custom": {"lineWidth": 2}
+        }
+      }
+    },
+    {
+      "id": 15,
+      "title": "Data Drift Detection Status",
+      "description": "Indikasi drift pada fitur input FastAPI. Nilai 1 berarti mean shift mencapai threshold.",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 44, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "max(tempcast_feature_drift_detected)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {"text": "NORMAL", "color": "green"},
+                "1": {"text": "DRIFT DETECTED", "color": "red"}
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      },
+      "options": {"colorMode": "background", "graphMode": "none"}
+    },
+    {
+      "id": 16,
+      "title": "Drifted Input Features",
+      "description": "Jumlah fitur input FastAPI yang mencapai threshold mean-shift drift.",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 44, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(tempcast_feature_drift_detected)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      },
+      "options": {"colorMode": "value", "graphMode": "area"}
+    }
+  ]
+}

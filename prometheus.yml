@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: "tempcast-api"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "api-service:8000"
+
+  - job_name: "tempcast-model"
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names:
+          - "model-serving"
+        type: A
+        port: 8080
+        refresh_interval: 5s
+
+  - job_name: "cadvisor"
+    static_configs:
+      - targets:
+          - "cadvisor:8080"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "prometheus:9090"
